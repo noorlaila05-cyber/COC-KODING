@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="id">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clash Of Champions: Cipher Vault Arena</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.577.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+      --navy:#0b1325; 
+      --cyan:#00f2fe; 
+      --gold:#ffb703; 
+      --red:#ef233c; 
+      --emerald:#20c997; 
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; overflow:hidden; background:var(--navy); font-family:"Fira Sans",sans-serif; }
+    body { color:#e9f7ff; }
+    .screen { position:fixed; inset:0; width:100vw; height:100vh; display:none; overflow:hidden; }
+    .screen.active { display:flex; flex-direction:column; }
+    
+    .arena-bg {
+      background-color:#0b1325;
+      background-image: 
+        radial-gradient(circle at 14% 10%, rgba(0,242,254,.18), transparent 28%), 
+        radial-gradient(circle at 88% 85%, rgba(255,183,3,.12), transparent 25%), 
+        linear-gradient(135deg, #09101e 0%, #0b1325 55%, #101c36 100%);
+    }
+    .gridline { 
+      background-image: linear-gradient(rgba(0,242,254,.06) 1px,transparent 1px), linear-gradient(90deg,rgba(0,242,254,.06) 1px,transparent 1px); 
+      background-size:32px 32px; 
+    }
+    .metal-title { text-shadow:0 0 10px #00f2fe,0 0 28px rgba(0,242,254,.55),3px 4px 0 #0a2737; }
+    .shield { 
+      clip-path:polygon(50% 0,91% 16%,85% 70%,50% 100%,15% 70%,9% 16%); 
+      background:linear-gradient(145deg,#e8fdff,#00a9c2 36%,#07385b 62%,#061d36); 
+      box-shadow:0 0 0 4px #8dfaff,0 0 35px #00f2fe; 
+    }
+    .gem { 
+      background:radial-gradient(circle at 35% 28%,#dfffff,#00f2fe 32%,#007da0 65%,#062d5c); 
+      box-shadow:0 0 24px #00f2fe; 
+    }
+    .neon-panel { 
+      border:1px solid rgba(0,242,254,.4); 
+      background:rgba(5,19,38,.82); 
+      box-shadow:inset 0 0 22px rgba(0,242,254,.05),0 0 24px rgba(0,242,254,.11); 
+    }
+    
+    .canva-button {
+      background: linear-gradient(135deg, #00f2fe 0%, #007da0 100%);
+      color: #0b1325;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+      transition: all 0.2s ease;
+    }
+    .canva-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 22px rgba(0, 242, 254, 0.6);
+      filter: brightness(1.1);
+    }
+    .canva-button:active {
+      transform: translateY(0);
+    }
+
+    .vault { 
+      position:relative; 
+      min-height:0; 
+      border:1px solid #00f2fe; 
+      background:linear-gradient(145deg,#102743,#081222); 
+      box-shadow:inset 0 0 18px rgba(0,242,254,.12),0 0 12px rgba(0,242,254,.26); 
+      transition:.18s transform,.18s filter; 
+      cursor: pointer;
+    }
+    .vault:hover:not(:disabled) { transform:translateY(-2px) scale(1.02); filter:brightness(1.2); }
+    .vault.medium { border-color:#ffb703; box-shadow:inset 0 0 18px rgba(255,183,3,.10),0 0 12px rgba(255,183,3,.22); }
+    .vault.hard { border-color:#db2777; box-shadow:inset 0 0 18px rgba(219,39,119,.12),0 0 12px rgba(168,85,247,.25); }
+    .vault:disabled { opacity:.68; cursor:not-allowed; background:linear-gradient(145deg,#342b0b,#161006); border-color:#ffb703; }
+    
+    .blink { animation:blink .9s infinite; }
+    .shake { animation:shake .45s linear; }
+    .confetti::before,.confetti::after { 
+      content:"✦ ✧ ✦ ✧ ✦ ✧ ✦ ✧ ✦"; 
+      position:absolute; 
+      inset:10% 0 auto; 
+      color:#ffdf70; 
+      font-size:clamp(28px,5vw,70px); 
+      letter-spacing:2.6vw; 
+      animation:float 1.6s ease-in-out infinite alternate; 
+    }
+    .confetti::after { top:auto; bottom:9%; color:#00f2fe; animation-delay:.25s; }
+    
+    .teacher-card { border:1px solid #a78336; background:linear-gradient(145deg,#071913,#0f261e 60%,#091712); color:#e8f9ed; }
+    .teacher-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); grid-template-rows:repeat(6,minmax(0,1fr)); gap:8px; height:100%; }
+    
+    .key { 
+      min-width:32px; 
+      padding:6px 8px; 
+      border:1px solid rgba(0,242,254,.42); 
+      border-radius:6px; 
+      background:#142742; 
+      color:#e8fcff; 
+      font-size:11px; 
+      font-weight:700; 
+      cursor: pointer;
+    }
+    .key:hover { background:#00a9c2; color:#04111f; }
+    .modal-bg { background:rgba(1,7,16,.78); backdrop-filter:blur(8px); }
+    .print-sheet { display:none; }
+    
+    @keyframes blink { 50%{ opacity:.32; color:#ff4d64; } }
+    @keyframes shake { 20%,60%{transform:translateX(-14px)} 40%,80%{transform:translateX(14px)} }
+    @keyframes float { to { transform:translateY(18px) rotate(2deg); } }
+    
+    @media print {
+      html,body { height:auto !important; overflow:visible !important; background:#fff !important; color:#000 !important; }
+      .screen,.modal-bg { display:none !important; }
+      .print-sheet { display:block !important; font-family:Arial,sans-serif; color:#000; background:#fff; }
+      .worksheet-page { width:210mm; min-height:297mm; padding:11mm; page-break-after:always; }
+      .worksheet-page:last-child { page-break-after:auto; }
+      .worksheet-title { font-size:17pt; font-weight:800; text-align:center; border-bottom:2px solid #000; padding-bottom:4mm; margin-bottom:4mm; }
+      .identity { display:grid; grid-template-columns:1fr 1.4fr .7fr; gap:4mm; font-size:10pt; margin-bottom:4mm; }
+      .identity div { border-bottom:1px solid #000; min-height:8mm; }
+      .instructions { font-size:9pt; border:1px solid #000; padding:3mm; margin-bottom:4mm; }
+      .question-grid { display:grid; grid-template-columns:1fr 1fr; gap:3mm; }
+      .question-box { border:1px solid #000; padding:2.3mm; min-height:31mm; break-inside:avoid; }
+      .question-box h3 { margin:0 0 1mm; font-size:8pt; }
+      .question-box p { margin:0; font-size:8pt; line-height:1.25; }
+      .answer-line { border:1px solid #555; margin-top:2mm; height:7mm; font-size:7pt; padding:1mm; }
+      .answer-grid { display:grid; grid-template-columns:1fr 1fr; gap:3mm; }
+      .answer-box { border:1px solid #000; padding:3mm; min-height:25mm; font-size:9pt; break-inside:avoid; }
+    }
+  </style>
+ </head>
+ <body>
+  <section id="screen-setup" class="screen active arena-bg gridline items-center justify-center p-4">
+   <button type="button" onclick="openTeacher()" class="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-lg border border-cyan-300/50 bg-slate-950/75 px-3 py-2 text-xs font-bold text-cyan-100 hover:bg-cyan-400 hover:text-slate-950"> 
+     <i data-lucide="lock-keyhole" class="h-4 w-4"></i><span data-template-id="teacher-menu-label" class="canva-text">Kunci Guru</span> 
+   </button>
+   <main class="w-full max-w-5xl">
+    <header class="mb-4 flex flex-col items-center text-center">
+     <div class="shield relative mb-3 h-24 w-24 sm:h-28 sm:w-28">
+      <div class="gem absolute left-1/2 top-[42%] h-10 w-10 -translate-x-1/2 rotate-45 rounded-md"></div>
+      <div class="absolute left-1/2 top-[44%] -translate-x-1/2 text-lg font-black text-white">C</div>
+     </div>
+     <p data-template-id="setup-kicker" class="canva-text mb-1 font-bold uppercase tracking-[.3em] text-cyan-300"></p>
+     <h1 data-template-id="setup-title" class="canva-text metal-title max-w-4xl text-2xl font-black uppercase leading-none text-white sm:text-4xl"></h1>
+     <p data-template-id="setup-subtitle" class="canva-text mt-2 font-semibold tracking-[.2em] text-amber-300"></p>
+    </header>
+    <section data-template-id="setup-panel" class="canva-panel neon-panel mx-auto w-full max-w-3xl rounded-2xl p-4 sm:p-6">
+     <form id="setup-form" onsubmit="event.preventDefault(); startGame();" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div>
+       <label data-template-id="team-count-label" class="canva-text mb-1 block font-bold text-cyan-100" for="team-count"></label> 
+       <input id="team-count" type="number" min="2" max="6" value="3" oninput="renderTeamInputs()" class="w-full rounded-lg border border-cyan-300/40 bg-slate-950 px-3 py-2 text-white outline-none focus:border-cyan-300">
+      </div>
+      <div>
+       <label data-template-id="duration-label" class="canva-text mb-1 block font-bold text-cyan-100" for="duration"></label> 
+       <input id="duration" type="number" min="1" max="120" value="15" class="w-full rounded-lg border border-cyan-300/40 bg-slate-950 px-3 py-2 text-white outline-none focus:border-cyan-300">
+      </div>
+      <div class="md:col-span-2">
+       <h2 data-template-id="team-name-heading" class="canva-text mb-2 font-bold text-amber-300"></h2>
+       <div id="team-inputs" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+      </div>
+      <div class="md:col-span-2 flex flex-wrap items-center justify-between gap-3 pt-1">
+       <p data-template-id="setup-note" class="canva-text text-sm text-slate-300"></p>
+       <button data-template-id="enter-arena-button" class="canva-button rounded-lg px-5 py-3 font-black tracking-wide transition hover:scale-105" type="button" onclick="startGame()"></button>
+      </div>
+     </form>
+    </section>
+    <footer class="mt-4 text-center text-xs text-slate-400">
+      <span data-template-id="footer-credit" class="canva-text"></span>
+    </footer>
+   </main>
+  </section>
+
+  <section id="screen-arena" class="screen arena-bg gridline p-2 sm:p-3">
+   <header class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2">
+    <div id="leaderboard" class="flex min-w-0 flex-wrap gap-1"></div>
+    <div class="text-center">
+     <div id="timer" class="font-mono text-3xl font-black tracking-widest text-cyan-200 sm:text-4xl">15:00</div>
+     <div data-template-id="timer-label" class="canva-text text-[10px] font-bold tracking-[.22em] text-slate-300"></div>
+    </div>
+    <div class="flex justify-end gap-1">
+     <button type="button" onclick="toggleTimer()" id="pause-btn" class="rounded-md border border-cyan-300/50 bg-slate-950/80 p-2 text-cyan-100" aria-label="Pause atau lanjutkan timer"><i data-lucide="pause" class="h-4 w-4"></i></button> 
+     <button type="button" onclick="toggleMusic()" id="music-btn" class="rounded-md border border-amber-300/70 bg-amber-400/15 p-2 text-amber-200" aria-label="Toggle musik"><i data-lucide="volume-2" class="h-4 w-4"></i></button> 
+     <button type="button" onclick="printWorksheet()" class="rounded-md border border-cyan-300/50 bg-slate-950/80 p-2 text-cyan-100" aria-label="Cetak soal"><i data-lucide="printer" class="h-4 w-4"></i></button> 
+     <button type="button" onclick="openTeacherLock()" class="rounded-md border border-cyan-300/50 bg-slate-950/80 p-2 text-cyan-100" aria-label="Kunci jawaban guru"><i data-lucide="key-round" class="h-4 w-4"></i></button>
+    </div>
+   </header>
+   <div class="my-2 flex shrink-0 items-center justify-between">
+    <h2 data-template-id="arena-heading" class="canva-text font-black uppercase tracking-[.18em] text-cyan-100"></h2>
+    <p data-template-id="arena-helper" class="canva-text text-xs text-slate-300"></p>
+   </div>
+   <main id="vault-grid" class="grid min-h-0 flex-1 grid-cols-5 grid-rows-6 gap-1.5 sm:gap-2"></main>
+  </section>
+
+  <section id="screen-gameover" class="screen arena-bg gridline items-center justify-center p-5 text-center">
+   <main class="w-full max-w-4xl">
+    <i data-lucide="trophy" class="mx-auto mb-3 h-16 w-16 text-amber-300"></i>
+    <h1 data-template-id="gameover-title" class="canva-text metal-title text-3xl font-black uppercase text-white sm:text-5xl"></h1>
+    <p data-template-id="gameover-subtitle" class="canva-text mt-2 text-cyan-200"></p>
+    <section class="mt-6 grid grid-cols-3 items-end gap-3">
+     <div id="podium-2" class="neon-panel rounded-t-xl p-3"></div>
+     <div id="podium-1" class="rounded-t-xl border border-amber-200 bg-amber-400/20 p-4 shadow-[0_0_30px_rgba(255,183,3,.35)]"></div>
+     <div id="podium-3" class="neon-panel rounded-t-xl p-3"></div>
+    </section>
+    <section id="final-scores" class="neon-panel mt-4 rounded-xl p-3"></section>
+    <button data-template-id="restart-button" class="canva-button mt-5 rounded-lg px-5 py-3 font-black" type="button" onclick="showScreen('screen-setup')"></button>
+   </main>
+  </section>
+
+  <section id="screen-teacher" class="screen arena-bg gridline p-4">
+   <header class="flex shrink-0 items-center justify-between gap-3">
+    <div>
+     <h1 data-template-id="teacher-title" class="canva-text font-black uppercase text-amber-300"></h1>
+     <p data-template-id="teacher-subtitle" class="canva-text text-sm text-cyan-100"></p>
+    </div>
+    <button data-template-id="back-setup-button" class="canva-button rounded-lg px-3 py-2 font-bold" type="button" onclick="showScreen('screen-setup')"></button>
+   </header>
+   <nav class="my-3 flex shrink-0 gap-2" aria-label="Tab dashboard guru">
+    <button data-template-id="tab-question-button" class="canva-button rounded-lg px-3 py-2 font-bold" type="button" onclick="setTeacherTab('questions')"></button> 
+    <button data-template-id="tab-answer-button" class="canva-button rounded-lg border border-amber-300/40 bg-slate-900 px-3 py-2 font-bold text-amber-200" type="button" onclick="setTeacherTab('answers')"></button> 
+    <span class="flex-1"></span> 
+    <button data-template-id="download-button" class="canva-button rounded-lg px-3 py-2 font-bold" type="button" onclick="downloadTeacherImage()"></button> 
+    <button data-template-id="print-button" class="canva-button rounded-lg px-3 py-2 font-bold" type="button" onclick="printWorksheet()"></button>
+   </nav>
+   <main id="teacher-export" class="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[#06100d] p-3">
+    <div id="teacher-grid" class="teacher-grid"></div>
+   </main>
+  </section>
+
+  <div id="vault-modal" class="modal-bg fixed inset-0 z-30 hidden items-center justify-center p-3">
+   <div data-template-id="vault-modal-panel" class="canva-panel neon-panel w-full max-w-2xl rounded-2xl p-4 sm:p-6">
+    <div class="mb-3 flex items-center justify-between">
+     <h2 id="vault-modal-title" class="font-black text-amber-300 text-lg sm:text-xl"></h2>
+     <button type="button" onclick="closeVaultModal()" class="text-cyan-100 hover:text-white" aria-label="Tutup modal"><i data-lucide="x"></i></button>
+    </div>
+    
+    <!-- Question text box -->
+    <div id="vault-question-box" class="mb-4 rounded-xl border border-cyan-400/40 bg-slate-900/90 p-4 text-center">
+      <div class="text-xs uppercase tracking-widest text-cyan-300 mb-1">Tantangan Vault:</div>
+      <div id="vault-question-text" class="text-base sm:text-lg font-bold text-white"></div>
+    </div>
+
+    <label data-template-id="answer-team-label" class="canva-text mb-1 block font-bold text-cyan-100" for="answer-team"></label> 
+    <select id="answer-team" class="mb-3 w-full rounded-lg border border-cyan-300/40 bg-slate-950 px-3 py-2 text-white"></select> 
+    
+    <label data-template-id="password-label" class="canva-text mb-1 block font-bold text-cyan-100" for="password-input"></label> 
+    <input id="password-input" type="text" autocomplete="off" class="w-full rounded-lg border border-amber-300/50 bg-slate-950 px-3 py-3 text-center font-mono text-lg text-white outline-none focus:border-amber-200">
+    
+    <div id="keyboard" class="mt-3 flex flex-wrap justify-center gap-1"></div>
+    <div class="mt-4 flex justify-end gap-2">
+     <button data-template-id="cancel-answer-button" class="canva-button rounded-lg px-4 py-2 font-bold" type="button" onclick="closeVaultModal()"></button> 
+     <button data-template-id="unlock-button" class="canva-button rounded-lg px-4 py-2 font-black" type="button" onclick="checkAnswer()"></button>
+    </div>
+   </div>
+  </div>
+
+  <div id="pin-modal" class="modal-bg fixed inset-0 z-40 hidden items-center justify-center p-4">
+   <div data-template-id="pin-modal-panel" class="canva-panel neon-panel w-full max-w-sm rounded-2xl p-5">
+    <h2 data-template-id="pin-title" class="canva-text font-black text-amber-300 text-lg"></h2>
+    <label data-template-id="pin-label" class="canva-text mt-3 block text-sm text-cyan-100" for="pin-input"></label> 
+    <input id="pin-input" type="password" inputmode="numeric" class="mt-1 w-full rounded-lg border border-cyan-300/40 bg-slate-950 p-3 text-center text-white font-mono text-xl">
+    <p id="pin-message" class="mt-2 h-4 text-xs font-bold text-red-300"></p>
+    <div class="mt-3 flex justify-end gap-2">
+     <button data-template-id="pin-cancel-button" class="canva-button rounded-lg px-3 py-2" type="button" onclick="closePinModal()"></button> 
+     <button data-template-id="pin-open-button" class="canva-button rounded-lg px-3 py-2 font-bold" type="button" onclick="verifyPin()"></button>
+    </div>
+   </div>
+  </div>
+
+  <div id="result-overlay" class="fixed inset-0 z-50 hidden items-center justify-center overflow-hidden p-5 text-center">
+   <div id="result-card" class="relative w-full max-w-3xl rounded-3xl border-2 p-8 shadow-2xl">
+    <i id="result-icon" data-lucide="shield-check" class="mx-auto mb-3 h-20 w-20"></i>
+    <h2 id="result-title" class="text-4xl font-black sm:text-6xl"></h2>
+    <p id="result-text" class="mt-3 text-xl font-bold sm:text-3xl"></p>
+    <button data-template-id="result-close-button" class="canva-button mt-7 rounded-lg px-5 py-3 font-black" type="button" onclick="closeResult()"></button>
+   </div>
+  </div>
+
+  <section class="print-sheet">
+   <article class="worksheet-page">
+    <div data-template-id="print-title" class="canva-text worksheet-title"></div>
+    <div class="identity">
+     <div data-template-id="group-field-label" class="canva-text"></div>
+     <div data-template-id="member-field-label" class="canva-text"></div>
+     <div data-template-id="class-field-label" class="canva-text"></div>
+    </div>
+    <div data-template-id="print-instructions" class="canva-text instructions"></div>
+    <div id="print-questions" class="question-grid"></div>
+   </article>
+   <article class="worksheet-page">
+    <div data-template-id="answer-key-title" class="canva-text worksheet-title"></div>
+    <div id="print-answers" class="answer-grid"></div>
+   </article>
+  </section>
+
+  <script>
+    const questions = [
+      ["Apa istilah untuk memecah masalah besar menjadi bagian-bagian kecil?", "DEKOMPOSISI"],
+      ["Pola berulang dalam data atau masalah disebut apa?", "PENGENALAN POLA"],
+      ["Proses memilih informasi penting dan mengabaikan detail tidak relevan?", "ABSTRAKSI"],
+      ["Urutan langkah logis untuk menyelesaikan masalah disebut?", "ALGORITMA"],
+      ["Rangkaian perintah yang dijalankan komputer untuk menyelesaikan tugas disebut?", "PROGRAM"],
+      ["Jaringan komputer global yang menghubungkan perangkat di seluruh dunia disebut?", "INTERNET"],
+      ["Alat untuk mengubah dokumen kertas menjadi file digital disebut?", "SCANNER"],
+      ["Perangkat keras utama untuk memproses instruksi komputer adalah?", "CPU"],
+      ["Kepanjangan dari URL adalah?", "UNIFORM RESOURCE LOCATOR"],
+      ["Jejak aktivitas yang kita tinggalkan di internet disebut?", "JEJAK DIGITAL"],
+      ["Informasi palsu yang sengaja dibuat untuk menipu disebut?", "DISINFORMASI"],
+      ["Sikap menggunakan teknologi secara bertanggung jawab disebut?", "LITERASI DIGITAL"],
+      ["Password yang kuat sebaiknya memiliki kombinasi huruf, angka, dan?", "SIMBOL"],
+      ["Teknik memeriksa kebenaran informasi dari sumber lain disebut?", "VERIFIKASI"],
+      ["Pesan elektronik yang tidak diinginkan dan sering berisi penipuan disebut?", "SPAM"],
+      ["Upaya mencuri data dengan menyamar sebagai pihak tepercaya disebut?", "PHISHING"],
+      ["Aplikasi untuk menjelajah halaman internet disebut?", "BROWSER"],
+      ["Hak hukum atas karya kreatif seseorang disebut?", "HAK CIPTA"],
+      ["Tindakan mengambil karya orang lain tanpa mencantumkan sumber disebut?", "PLAGIARISME"],
+      ["Sikap sopan dan etis ketika berkomunikasi daring disebut?", "NETIKET"],
+      ["Informasi pribadi seperti alamat dan nomor telepon harus dijaga sebagai?", "PRIVASI"],
+      ["Program berbahaya yang dapat merusak komputer disebut?", "MALWARE"],
+      ["Cadangan data untuk menghindari kehilangan data disebut?", "BACKUP"],
+      ["Layanan penyimpanan data melalui internet disebut?", "CLOUD"],
+      ["Kepanjangan AI dalam bahasa Inggris adalah?", "ARTIFICIAL INTELLIGENCE"],
+      ["Kemampuan mesin belajar dari data disebut?", "MACHINE LEARNING"],
+      ["Bias pada AI dapat muncul akibat data pelatihan yang tidak?", "SEIMBANG"],
+      ["Media digital yang memadukan teks, suara, gambar, dan video disebut?", "MULTIMEDIA"],
+      ["Lisensi yang memungkinkan karya digunakan sesuai syarat tertentu disebut?", "CREATIVE COMMONS"],
+      ["Langkah pertama saat menerima berita mencurigakan adalah memeriksa?", "SUMBER"]
+    ].map((q,i)=>({
+      id: i+1, 
+      question: q[0], 
+      answer: q[1], 
+      points: i < 10 ? 100 : i < 20 ? 200 : 300, 
+      type: ["BINER"].includes(q[1]) || /^[01]+$/.test(q[1]) ? "binary" : "text"
+    }));
+
+    let teams = [];
+    let currentVault = null;
+    let remainingSeconds = 900;
+    let timerRef = null;
+    let paused = false;
+    let opened = new Set();
+    let teacherTab = "questions";
+    let teacherPin = "1234";
+    let pendingTeacherAction = null;
+    let audioCtx = null;
+    let gainMusikLatar = null;
+    let gainEfekSuara = null;
+    let musicNodes = [];
+    let musicOn = true;
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function initTextContent() {
+      const textMap = {
+        "teacher-menu-label": "Kunci Guru",
+        "setup-kicker": "ARENA BERPIKIR KOMPUTASIONAL & LITERASI DIGITAL",
+        "setup-title": "CLASH OF CHAMPIONS: CIPHER VAULT ARENA",
+        "setup-subtitle": "Buka Brankas Sandi & Raih Skor Tertinggi!",
+        "team-count-label": "Jumlah Tim (2-6):",
+        "duration-label": "Durasi Waktu (Menit):",
+        "team-name-heading": "Nama Tim Bertanding:",
+        "setup-note": "Setiap Vault berisi tantangan poin 100 (Mudah), 200 (Sedang), atau 300 (Sulit).",
+        "enter-arena-button": "MASUK ARENA CIPHER ➔",
+        "timer-label": "SISA WAKTU",
+        "arena-heading": "CIPHER VAULT MATRIX",
+        "arena-helper": "Pilih brankas, selesaikan sandi, kumpulkan poin!",
+        "gameover-title": "ARENA FINISHED!",
+        "gameover-subtitle": "Selamat kepada para Juara Cipher Vault!",
+        "restart-button": "Mainkan Lagi ↺",
+        "teacher-title": "PANEL GURU & KUNCI JAWABAN",
+        "teacher-subtitle": "Gunakan panel ini untuk memandu jalannya permainan atau mencetak lembar kerja.",
+        "back-setup-button": "← Kembali",
+        "tab-question-button": "Daftar Soal",
+        "tab-answer-button": "Kunci Jawaban",
+        "download-button": "Unduh Gambar (PNG)",
+        "print-button": "Cetak Lembar Kerja (PDF)",
+        "answer-team-label": "Pilih Tim yang Menjawab:",
+        "password-label": "Masukkan Kunci Jawaban / Sandi:",
+        "cancel-answer-button": "Batal",
+        "unlock-button": "BUKA BRANKAS 🔓",
+        "pin-title": "KONTROL AKSES GURU",
+        "pin-label": "Masukkan PIN Keamanan Guru (Default: 1234):",
+        "pin-cancel-button": "Batal",
+        "pin-open-button": "Buka Kunci",
+        "result-close-button": "Lanjutkan Permainan ➔",
+        "print-title": "LEMBAR KERJA TANTANGAN CIPHER VAULT ARENA",
+        "group-field-label": "Nama Kelompok: _______________________",
+        "member-field-label": "Anggota: _____________________________",
+        "class-field-label": "Kelas: ____________",
+        "print-instructions": "Petunjuk: Pecahkan pertanyaan di setiap Vault di bawah ini. Tuliskan jawaban/sandi yang tepat untuk membuka setiap brankas pada kolom yang tersedia!",
+        "answer-key-title": "KUNCI JAWABAN & PEDOMAN SKOR (KHUSUS GURU)",
+        "footer-credit": "Clash of Champions: Cipher Vault Arena • Computational Thinking & Digital Literacy Edition"
+      };
+
+      for (const [id, text] of Object.entries(textMap)) {
+        const el = document.querySelector(`[data-template-id="${id}"]`);
+        if (el) el.textContent = text;
+      }
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      window.scrollTo(0,0);
+    }
+
+    function renderTeamInputs(){
+      const count = Math.max(2, Math.min(6, Number(document.getElementById("team-count").value) || 3));
+      document.getElementById("team-count").value = count;
+      const wrap = document.getElementById("team-inputs");
+      const old = [...wrap.querySelectorAll("input")].map(x => x.value);
+      wrap.innerHTML = "";
+      for(let i = 0; i < count; i++){
+        const input = document.createElement("input");
+        input.id = "team-name-" + i; 
+        input.type = "text"; 
+        input.value = old[i] || "Tim " + (i + 1);
+        input.setAttribute("aria-label", "Nama Tim " + (i + 1));
+        input.className = "rounded-lg border border-cyan-300/30 bg-slate-950 px-3 py-2 text-sm text-white";
+        wrap.appendChild(input);
+      }
+    }
+
+    function startGame(){
+      const count = Number(document.getElementById("team-count").value);
+      teams = Array.from({length: count}, (_, i) => ({
+        name: document.getElementById("team-name-" + i).value.trim() || "Tim " + (i + 1),
+        score: 0
+      }));
+      remainingSeconds = (Math.max(1, Number(document.getElementById("duration").value) || 15)) * 60;
+      opened.clear(); 
+      paused = false; 
+      updateTimer(); 
+      renderLeaderboard(); 
+      renderVaults(); 
+      buildPrintPages();
+      showScreen("screen-arena");
+      startTimer();
+      startMusicFromGesture();
+    }
+
+    function startTimer(){
+      clearInterval(timerRef);
+      timerRef = setInterval(() => { 
+        if(!paused){ 
+          remainingSeconds--; 
+          updateTimer(); 
+          if(remainingSeconds <= 0) endGame(); 
+        } 
+      }, 1000);
+    }
+
+    function toggleTimer(){
+      paused = !paused;
+      document.getElementById("pause-btn").innerHTML = paused 
+        ? '<i data-lucide="play" class="h-4 w-4"></i>' 
+        : '<i data-lucide="pause" class="h-4 w-4"></i>';
+      lucide.createIcons();
+    }
+
+    function updateTimer(){
+      const m = Math.floor(Math.max(0, remainingSeconds) / 60);
+      const s = Math.max(0, remainingSeconds) % 60;
+      const t = document.getElementById("timer"); 
+      t.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+      t.classList.toggle("blink", remainingSeconds <= 120);
+    }
+
+    function renderLeaderboard(){
+      document.getElementById("leaderboard").innerHTML = teams.map((t, i) => `
+        <div class="rounded-md border border-cyan-300/20 bg-slate-950/70 px-2 py-1 text-[10px] sm:text-xs">
+          <b class="text-cyan-200">${i+1}. ${escapeHtml(t.name)}</b> 
+          <span class="text-amber-300 ml-1 font-bold">${t.score}</span>
+        </div>
+      `).join("");
+    }
+
+    function renderVaults(){
+      const grid = document.getElementById("vault-grid"); 
+      grid.innerHTML = "";
+      questions.forEach(q => {
+        const b = document.createElement("button"); 
+        b.type = "button"; 
+        b.disabled = opened.has(q.id);
+        b.className = "vault " + (q.points === 200 ? "medium" : q.points === 300 ? "hard" : "") + " rounded-md p-1 text-center flex flex-col items-center justify-center";
+        b.onclick = () => openVault(q.id);
+        
+        if (opened.has(q.id)) {
+          const ownerTeam = teams.find(t => t.opened === q.id)?.name || "TERBUKA";
+          b.innerHTML = `
+            <i data-lucide="lock-keyhole" class="mx-auto h-5 w-5 text-amber-300"></i>
+            <div class="mt-1 truncate text-[8px] font-bold text-amber-100 max-w-full">${escapeHtml(ownerTeam)}</div>
+          `;
+        } else {
+          b.innerHTML = `
+            <div class="text-[10px] font-black text-cyan-100 sm:text-sm">VAULT #${String(q.id).padStart(2, "0")}</div>
+            <div class="mt-0.5 text-[10px] font-black text-amber-300 sm:text-xs">${q.points} PTS</div>
+          `;
+        }
+        grid.appendChild(b);
+      }); 
+      lucide.createIcons();
+    }
+
+    function openVault(id){
+      currentVault = questions.find(q => q.id === id);
+      document.getElementById("vault-modal-title").textContent = `VAULT #${String(id).padStart(2, "0")} — ${currentVault.points} PTS`;
+      document.getElementById("vault-question-text").textContent = currentVault.question;
+      document.getElementById("answer-team").innerHTML = teams.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join("");
+      document.getElementById("password-input").value = "";
+      buildKeyboard(currentVault.type);
+      document.getElementById("vault-modal").classList.remove("hidden"); 
+      document.getElementById("vault-modal").classList.add("flex");
+      document.getElementById("password-input").focus();
+    }
+
+    function closeVaultModal(){ 
+      document.getElementById("vault-modal").classList.add("hidden"); 
+      document.getElementById("vault-modal").classList.remove("flex"); 
+    }
+
+    function buildKeyboard(type){
+      const chars = type === "binary" 
+        ? ["0", "1"] 
+        : ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
+      const key = document.getElementById("keyboard");
+      key.innerHTML = chars.map(c => `<button type="button" class="key" onclick="appendKey('${c}')">${c}</button>`).join("") +
+        `<button type="button" class="key" onclick="appendKey(' ')">SPACE</button><button type="button" class="key" onclick="backspaceKey()">⌫</button><button type="button" class="key bg-cyan-400 text-slate-950 font-bold" onclick="checkAnswer()">SUBMIT</button>`;
+    }
+
+    function appendKey(k){ 
+      const i = document.getElementById("password-input"); 
+      i.value += k; 
+      i.focus(); 
+    }
+
+    function backspaceKey(){ 
+      const i = document.getElementById("password-input"); 
+      i.value = i.value.slice(0, -1); 
+      i.focus(); 
+    }
+
+    function normalize(s){ 
+      return s.trim().toUpperCase().replace(/\s+/g, " "); 
+    }
+
+    function checkAnswer(){
+      if(!currentVault) return;
+      const answer = normalize(document.getElementById("password-input").value);
+      if(answer === normalize(currentVault.answer)){
+        const teamIndex = Number(document.getElementById("answer-team").value);
+        const team = teams[teamIndex];
+        team.score += currentVault.points; 
+        team.opened = currentVault.id; 
+        opened.add(currentVault.id);
+        closeVaultModal(); 
+        renderLeaderboard(); 
+        renderVaults(); 
+        playSuccess(); 
+        showResult(true, team.name, currentVault.points);
+        if(opened.size === questions.length) setTimeout(endGame, 1500);
+      } else { 
+        closeVaultModal(); 
+        playFail(); 
+        showResult(false, "", 0); 
+      }
+    }
+
+    function showResult(ok, name, points){
+      const overlay = document.getElementById("result-overlay");
+      const card = document.getElementById("result-card");
+      overlay.className = "fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-5 text-center " + (ok ? "bg-emerald-950/95 confetti" : "bg-red-950/95");
+      card.className = "relative w-full max-w-3xl rounded-3xl border-2 p-8 shadow-2xl " + (ok ? "border-cyan-200 bg-emerald-800/90 text-white" : "shake border-red-300 bg-red-800/90 text-white");
+      document.getElementById("result-icon").setAttribute("data-lucide", ok ? "shield-check" : "shield-x");
+      document.getElementById("result-title").textContent = ok ? "ACCESS GRANTED!" : "ACCESS DENIED!";
+      document.getElementById("result-text").textContent = ok ? `${name} MEMBUKA VAULT! +${points} PTS` : "KODE PASSWORD SALAH!";
+      lucide.createIcons();
+    }
+
+    function closeResult(){ 
+      document.getElementById("result-overlay").classList.add("hidden"); 
+    }
+
+    function endGame(){
+      clearInterval(timerRef); 
+      closeResult(); 
+      renderGameOver(); 
+      stopMusic(); 
+      showScreen("screen-gameover");
+    }
+
+    function renderGameOver(){
+      const sorted = [...teams].sort((a, b) => b.score - a.score);
+      [["podium-1", 0, "JUARA 1"], ["podium-2", 1, "JUARA 2"], ["podium-3", 2, "JUARA 3"]].forEach(([id, i, label]) => {
+        const t = sorted[i]; 
+        document.getElementById(id).innerHTML = t 
+          ? `<div class="text-xs font-bold text-amber-200">${label}</div><div class="mt-1 font-black text-white text-lg">${escapeHtml(t.name)}</div><div class="text-2xl font-black text-amber-300">${t.score}</div>`
+          : "";
+      });
+      document.getElementById("final-scores").innerHTML = sorted.map((t, i) => `
+        <div class="flex justify-between border-b border-cyan-300/10 py-1.5 text-sm">
+          <span>${i+1}. ${escapeHtml(t.name)}</span>
+          <b class="text-amber-300">${t.score} PTS</b>
+        </div>
+      `).join("");
+    }
+
+    function ensureAudio(){
+      if(!audioCtx){ 
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+        gainMusikLatar = audioCtx.createGain(); 
+        gainEfekSuara = audioCtx.createGain(); 
+        gainMusikLatar.gain.value = 0.08; 
+        gainEfekSuara.gain.value = 0.22; 
+        gainMusikLatar.connect(audioCtx.destination); 
+        gainEfekSuara.connect(audioCtx.destination); 
+      }
+    }
+
+    function startMusicFromGesture(){
+      ensureAudio(); 
+      audioCtx.resume();
+      if(musicOn && !musicNodes.length) createMusicLoop();
+    }
+
+    function createMusicLoop(){
+      if(!musicOn) return;
+      const notes = [220, 277.18, 329.63, 440, 329.63, 277.18, 246.94, 329.63];
+      const start = audioCtx.currentTime + 0.03;
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = i % 3 === 0 ? "square" : "sawtooth"; 
+        osc.frequency.value = f; 
+        g.gain.setValueAtTime(0.0001, start + i * 0.24); 
+        g.gain.exponentialRampToValueAtTime(0.06, start + i * 0.24 + 0.02); 
+        g.gain.exponentialRampToValueAtTime(0.0001, start + i * 0.24 + 0.21);
+        osc.connect(g); 
+        g.connect(gainMusikLatar); 
+        osc.start(start + i * 0.24); 
+        osc.stop(start + i * 0.24 + 0.23); 
+        musicNodes.push(osc);
+      });
+      const loopDuration = notes.length * 0.24;
+      const loop = setTimeout(() => { 
+        musicNodes = []; 
+        if(musicOn && document.getElementById("screen-arena").classList.contains("active")) {
+          createMusicLoop(); 
+        }
+      }, loopDuration * 1000);
+      musicNodes.push({ stop: () => clearTimeout(loop) });
+    }
+
+    function stopMusic(){ 
+      musicNodes.forEach(n => { try { n.stop(); } catch(e){} }); 
+      musicNodes = []; 
+    }
+
+    function toggleMusic(){
+      musicOn = !musicOn; 
+      ensureAudio(); 
+      audioCtx.resume();
+      if(musicOn) createMusicLoop(); else stopMusic();
+      document.getElementById("music-btn").innerHTML = musicOn
+        ? '<i data-lucide="volume-2" class="h-4 w-4"></i>'
+        : '<i data-lucide="volume-x" class="h-4 w-4"></i>';
+      lucide.createIcons();
+    }
+
+    function soundEffect(freq, duration, type, rampTo = null){
+      if(!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      const now = audioCtx.currentTime;
+      o.type = type; 
+      o.frequency.setValueAtTime(freq, now); 
+      if(rampTo) {
+        o.frequency.exponentialRampToValueAtTime(rampTo, now + duration);
+      }
+      g.gain.setValueAtTime(0.001, now); 
+      g.gain.exponentialRampToValueAtTime(0.35, now + 0.015); 
+      g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      o.connect(g); 
+      g.connect(gainEfekSuara); 
+      o.start(now); 
+      o.stop(now + duration);
+    }
+
+    function playSuccess(){ 
+      ensureAudio(); 
+      soundEffect(880, 0.18, "sine"); 
+      setTimeout(() => soundEffect(1320, 0.35, "sine"), 150); 
+    }
+
+    function playFail(){ 
+      ensureAudio(); 
+      soundEffect(220, 0.35, "sawtooth", 110); 
+    }
+
+    function openTeacher() {
+      pendingTeacherAction = () => {
+        renderTeacherGrid();
+        showScreen("screen-teacher");
+      };
+      openPinModal();
+    }
+
+    function openTeacherLock() {
+      pendingTeacherAction = () => {
+        renderTeacherGrid();
+        showScreen("screen-teacher");
+      };
+      openPinModal();
+    }
+
+    function openPinModal() {
+      document.getElementById("pin-input").value = "";
+      document.getElementById("pin-message").textContent = "";
+      document.getElementById("pin-modal").classList.remove("hidden");
+      document.getElementById("pin-modal").classList.add("flex");
+      document.getElementById("pin-input").focus();
+    }
+
+    function closePinModal() {
+      document.getElementById("pin-modal").classList.add("hidden");
+      document.getElementById("pin-modal").classList.remove("flex");
+    }
+
+    function verifyPin() {
+      const val = document.getElementById("pin-input").value;
+      if (val === teacherPin) {
+        closePinModal();
+        if (pendingTeacherAction) pendingTeacherAction();
+      } else {
+        document.getElementById("pin-message").textContent = "PIN salah! Gunakan PIN default 1234";
+      }
+    }
+
+    function setTeacherTab(tab) {
+      teacherTab = tab;
+      const btnQ = document.querySelector('[data-template-id="tab-question-button"]');
+      const btnA = document.querySelector('[data-template-id="tab-answer-button"]');
+      if (tab === "questions") {
+        btnQ.className = "canva-button rounded-lg px-3 py-2 font-bold";
+        btnA.className = "canva-button rounded-lg border border-amber-300/40 bg-slate-900 px-3 py-2 font-bold text-amber-200";
+      } else {
+        btnA.className = "canva-button rounded-lg px-3 py-2 font-bold";
+        btnQ.className = "canva-button rounded-lg border border-cyan-300/40 bg-slate-900 px-3 py-2 font-bold text-cyan-200";
+      }
+      renderTeacherGrid();
+    }
+
+    function renderTeacherGrid() {
+      const grid = document.getElementById("teacher-grid");
+      if (!grid) return;
+      grid.innerHTML = questions.map(q => {
+        if (teacherTab === "questions") {
+          return `
+            <div class="teacher-card flex flex-col justify-between rounded-lg p-2.5 text-xs shadow">
+              <div>
+                <div class="flex items-center justify-between font-bold text-cyan-300">
+                  <span>VAULT #${String(q.id).padStart(2, '0')}</span>
+                  <span class="text-amber-300">${q.points} PTS</span>
+                </div>
+                <p class="mt-1 text-[11px] leading-snug text-slate-200">${escapeHtml(q.question)}</p>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="teacher-card flex flex-col justify-between rounded-lg p-2.5 text-xs shadow">
+              <div>
+                <div class="flex items-center justify-between font-bold text-cyan-300">
+                  <span>VAULT #${String(q.id).padStart(2, '0')}</span>
+                  <span class="text-amber-300">${q.points} PTS</span>
+                </div>
+                <div class="mt-1 rounded bg-slate-950/80 p-1.5 font-mono text-[11px] font-bold text-amber-300 break-all">
+                  ${escapeHtml(q.answer)}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }).join("");
+    }
+
+    function downloadTeacherImage() {
+      const node = document.getElementById("teacher-export");
+      if (!node) return;
+      html2canvas(node, { backgroundColor: "#06100d" }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "Kunci_Jawaban_Cipher_Vault_Arena.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    }
+
+    function printWorksheet() {
+      window.print();
+    }
+
+    function buildPrintPages() {
+      const qContainer = document.getElementById("print-questions");
+      const aContainer = document.getElementById("print-answers");
+      if (!qContainer || !aContainer) return;
+      
+      qContainer.innerHTML = questions.map(q => `
+        <div class="question-box">
+          <h3>VAULT #${String(q.id).padStart(2, '0')} (${q.points} PTS)</h3>
+          <p>${escapeHtml(q.question)}</p>
+          <div class="answer-line">JAWABAN: </div>
+        </div>
+      `).join("");
+      
+      aContainer.innerHTML = questions.map(q => `
+        <div class="answer-box">
+          <strong>VAULT #${String(q.id).padStart(2, '0')} (${q.points} PTS)</strong>
+          <p class="mt-1">${escapeHtml(q.question)}</p>
+          <p class="mt-2 font-bold text-emerald-800">KUNCI: ${escapeHtml(q.answer)}</p>
+        </div>
+      `).join("");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initTextContent();
+      renderTeamInputs();
+      lucide.createIcons();
+
+      document.getElementById("password-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          checkAnswer();
+        }
+      });
+
+      document.getElementById("pin-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          verifyPin();
+        }
+      });
+    });
+  </script>
+ </body>
+</html>
